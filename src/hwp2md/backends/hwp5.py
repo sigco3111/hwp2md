@@ -23,6 +23,11 @@ from typing import Dict, Iterator, List, Optional, Tuple
 
 from hwp2md._markdown import gfm_table, sanitize_inline
 from hwp2md.exceptions import ConversionError, EncryptedDocumentError
+from hwp2md.metadata import (
+    DocumentMetadata,
+    _parse_packed_hwp_date,
+    prepend_frontmatter,
+)
 
 HWP5_SIGNATURE = bytes.fromhex("D0CF11E0A1B11AE1")
 
@@ -34,6 +39,8 @@ PARA_TEXT = 67
 TABLE = 68
 TABLE_CELL = 69
 LIST_HEADER = 73
+DOCUMENT_PROPERTIES = 78
+IDENTITY_NAME = 72
 SHAPE_COMPONENT = 81
 
 PARA_CONTROL_NEW = 0x0000
@@ -241,6 +248,61 @@ def _read_char_shapes(ole, source: Path) -> Dict[int, CharShape]:
             shape = _parse_char_shape_payload(payload)
             shapes[len(shapes)] = shape
     return shapes
+
+
+def _read_docinfo_records(ole, source: Path):
+    """Yield (tag, level, payload) records from the decompressed DocInfo stream."""
+    try:
+        if not ole.exists("DocInfo"):
+            return
+        with ole.openstream("DocInfo") as s:
+            data = s.read()
+    except (KeyError, OSError):
+        return
+    decompressed = _decompress_section(data)
+    yield from _iter_records(decompressed)
+
+
+def _extract_metadata_hwp5(ole, source: Path) -> DocumentMetadata:
+    """Read metadata from the DocInfo stream.
+
+    The dates come from HWPTAG_DOCUMENT_PROPERTIES (the bit-packed
+    ``(year << 16) | (month << 8) | day`` value sits at offset
+    14 once the section/page/footnote/endnote/image/table
+    counters are skipped). Author/title are best-effort — the
+    HWP 5.x format does not store them in a fixed record, so we
+    scan HWPTAG_IDENTITY_NAME for any non-empty UTF-16LE string.
+    """
+    meta = DocumentMetadata()
+    found_creation = False
+    found_last_mod = False
+    for tag, _level, payload in _read_docinfo_records(ole, source):
+        if tag == DOCUMENT_PROPERTIES and len(payload) >= 22:
+            if not found_creation:
+                created = _parse_packed_hwp_date(payload, 14)
+                if created:
+                    meta.date = created
+                    found_creation = True
+            if not found_last_mod:
+                modified = _parse_packed_hwp_date(payload, 18)
+                if modified:
+                    meta.last_modified = modified
+                    found_last_mod = True
+            if len(payload) >= 38 and not meta.author:
+                try:
+                    candidate = payload[22:38].decode("utf-16-le", errors="ignore").strip("\x00 ")
+                    if candidate:
+                        meta.author = candidate
+                except UnicodeDecodeError:
+                    pass
+        elif tag == IDENTITY_NAME and not meta.author:
+            try:
+                candidate = payload.decode("utf-16-le", errors="ignore").strip("\x00 ").strip()
+                if candidate:
+                    meta.author = candidate
+            except UnicodeDecodeError:
+                pass
+    return meta
 
 
 def _list_bindata_streams(ole) -> List[Tuple[str, bytes]]:
@@ -518,6 +580,7 @@ def convert_hwp5(
     encoding: str = "utf-8",
     image_mode: str = "skip",
     image_dir: Optional[Path] = None,
+    with_metadata: bool = True,
 ) -> str:
     """Convert a .hwp (HWP 5.x) file to markdown.
 
@@ -527,6 +590,10 @@ def convert_hwp5(
     recoverable way, so images are extracted up front and a single
     reference to the first image is appended at the end of the
     document.
+
+    When ``with_metadata`` is true and DocInfo exposes
+    HWPTAG_DOCUMENT_PROPERTIES (or HWPTAG_IDENTITY_NAME for the
+    author), a YAML frontmatter block is prepended to the output.
     """
     del encoding
     if not source.is_file():
@@ -548,6 +615,7 @@ def convert_hwp5(
         ) from e
     try:
         char_shapes = _read_char_shapes(ole, source)
+        metadata = _extract_metadata_hwp5(ole, source) if with_metadata else DocumentMetadata()
         section_streams = sorted(
             name for name in ole.listdir(streams=True, storages=False)
             if name[0] == "BodyText" and name[-1].startswith("Section")
@@ -576,6 +644,30 @@ def convert_hwp5(
     if image_mode == "link" and image_dir is not None and bindata_files:
         rel_dir = image_dir.name
         md_parts.append(f"![image]({rel_dir}/{bindata_files[0].name})")
-    if not md_parts:
-        return ""
-    return "\n\n".join(md_parts)
+    body = "\n\n".join(md_parts)
+    if with_metadata and not metadata.is_empty():
+        return prepend_frontmatter(body, metadata)
+    return body
+
+
+def extract_metadata_hwp5(source: Path) -> DocumentMetadata:
+    """Read only the DocInfo metadata without rendering the body."""
+    if not source.is_file():
+        raise FileNotFoundError(f"HWP file not found: {source}")
+    _check_encryption(source)
+    olefile = _read_olefile()
+    source_str = str(source)
+    if not olefile.isOleFile(source_str):
+        raise ConversionError(
+            f"File is not an OLE compound document: {source.name}"
+        )
+    try:
+        ole = olefile.OleFileIO(source_str)
+    except (olefile.olefile.NotOleFileError, ValueError, OSError) as e:
+        raise ConversionError(
+            f"File is not a valid HWP 5.x OLE document: {source.name}"
+        ) from e
+    try:
+        return _extract_metadata_hwp5(ole, source)
+    finally:
+        ole.close()

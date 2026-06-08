@@ -25,6 +25,7 @@ def convert(
     encoding: str = "utf-8",
     image_mode: ImageMode = "link",
     image_dir: Optional[PathLike] = None,
+    with_metadata: bool = True,
 ) -> str:
     """Convert a single HWP/HWPX file to a Markdown string.
 
@@ -40,6 +41,11 @@ def convert(
             Directory used for image extraction when ``image_mode="link"``.
             If ``None`` (default), a sibling directory ``<stem>_images`` is
             created next to the markdown output.
+        with_metadata:
+            When true (the default) and the source exposes document
+            metadata (HWPX ``header.xml`` or HWP 5.x DocInfo), prepend
+            a YAML frontmatter block with title, author, dates, and
+            keywords.
 
     Returns:
         Markdown text representation of the document.
@@ -63,6 +69,7 @@ def convert(
             encoding=encoding,
             image_mode=image_mode,
             image_dir=Path(image_dir) if image_dir is not None else None,
+            with_metadata=with_metadata,
         )
     elif suffix == ".hwp":
         from hwp2md.backends.hwp5 import convert_hwp5
@@ -72,6 +79,7 @@ def convert(
             encoding=encoding,
             image_mode=image_mode,
             image_dir=Path(image_dir) if image_dir is not None else None,
+            with_metadata=with_metadata,
         )
     else:
         raise UnsupportedFormatError(
@@ -87,6 +95,7 @@ def batch_convert(
     encoding: str = "utf-8",
     recursive: bool = True,
     image_mode: ImageMode = "link",
+    with_metadata: bool = True,
 ) -> Iterator[tuple[Path, Path]]:
     """Recursively convert all HWP/HWPX files in a directory.
 
@@ -96,6 +105,8 @@ def batch_convert(
         encoding: Output encoding (default: utf-8).
         recursive: Whether to walk subdirectories (default: True).
         image_mode: How to handle embedded images (see :func:`convert`).
+        with_metadata: Prepend YAML frontmatter when present
+            (see :func:`convert`).
 
     Yields:
         Tuples of (source_path, output_path) for each converted file.
@@ -127,6 +138,7 @@ def batch_convert(
             encoding=encoding,
             image_mode=image_mode,
             image_dir=image_dir,
+            with_metadata=with_metadata,
         )
         dst_path.write_text(md_text, encoding=encoding)
         yield src_path, dst_path

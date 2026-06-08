@@ -311,6 +311,55 @@ def test_convert_hwp5_invalid_image_mode(tmp_path: Path) -> None:
         convert_hwp5(target, image_mode="bogus")
 
 
+def test_extract_metadata_hwp5_parses_packed_date() -> None:
+    from hwp2md.backends.hwp5 import (
+        DOCUMENT_PROPERTIES,
+        _extract_metadata_hwp5,
+        _iter_records,
+    )
+    from hwp2md.metadata import DocumentMetadata
+    from datetime import date
+
+    payload = bytearray(24)
+    struct.pack_into("<H", payload, 0, 1)
+    struct.pack_into("<H", payload, 2, 1)
+    struct.pack_into("<H", payload, 4, 0)
+    struct.pack_into("<H", payload, 6, 0)
+    struct.pack_into("<H", payload, 8, 0)
+    struct.pack_into("<H", payload, 10, 0)
+    struct.pack_into("<H", payload, 12, 0)
+    created = (2025 << 16) | (3 << 8) | 15
+    modified = (2025 << 16) | (4 << 8) | 1
+    struct.pack_into("<I", payload, 14, created)
+    struct.pack_into("<I", payload, 18, modified)
+
+    class _FakeOle:
+        def __init__(self, docinfo: bytes) -> None:
+            self._docinfo = docinfo
+        def exists(self, name: str) -> bool:
+            return name == "DocInfo"
+        def openstream(self, name: str):
+            from io import BytesIO
+            return BytesIO(self._docinfo)
+
+    record = struct.pack("<HHI", DOCUMENT_PROPERTIES, 0, len(payload)) + bytes(payload)
+    docinfo = b"".join([record])
+    meta = _extract_metadata_hwp5(_FakeOle(docinfo), Path("dummy.hwp"))
+    assert meta.date == date(2025, 3, 15)
+    assert meta.last_modified == date(2025, 4, 1)
+
+
+def test_extract_metadata_hwp5_handles_missing_docinfo() -> None:
+    from hwp2md.backends.hwp5 import _extract_metadata_hwp5
+
+    class _FakeOle:
+        def exists(self, name: str) -> bool:
+            return False
+
+    meta = _extract_metadata_hwp5(_FakeOle(), Path("dummy.hwp"))
+    assert meta.is_empty()
+
+
 def test_section_parser_combines_multi_paragraph_cell() -> None:
     data = _section_with_records(
         [

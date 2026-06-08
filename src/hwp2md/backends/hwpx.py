@@ -26,6 +26,7 @@ from hwp2md._markdown import (
     slugify_alt_text,
 )
 from hwp2md.exceptions import ConversionError, EncryptedDocumentError
+from hwp2md.metadata import DocumentMetadata, parse_iso_date
 
 HWPX_MIMETYPE = "application/hwp+zip"
 
@@ -72,6 +73,73 @@ def _detect_encryption(zf: zipfile.ZipFile) -> None:
         )
 
 
+def _extract_metadata_hwpx(zf: zipfile.ZipFile) -> DocumentMetadata:
+    """Read ``Contents/header.xml`` and pull out document metadata.
+
+    Supports both the HWPML 2011 ``<hp:title>``/``<hp:author>``
+    style and the Dublin Core ``<dc:title>``/``<dc:creator>``
+    style used by HWPML 2016+. Returns an empty metadata object
+    if no header is present or the file is malformed.
+    """
+    meta = DocumentMetadata()
+    try:
+        raw = zf.read("Contents/header.xml")
+    except KeyError:
+        return meta
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError:
+        return meta
+
+    title = _find_local_text(root, ("hp:title", "hc:title", "dc:title"))
+    if title:
+        meta.title = title
+
+    author = _find_local_text(root, ("hp:author", "hc:author", "dc:creator"))
+    if author:
+        meta.author = author
+
+    subject = _find_local_text(root, ("hp:subject", "hc:subject", "dc:subject"))
+    if subject:
+        meta.subject = subject
+
+    date_str = _find_local_text(root, ("hp:date", "hc:date", "dc:date"))
+    meta.date = parse_iso_date(date_str) if date_str else None
+
+    last_mod = _find_local_text(
+        root, ("hp:lastModifiedDate", "hc:lastModifiedDate", "cp:lastModifiedBy")
+    )
+    if last_mod:
+        parsed = parse_iso_date(last_mod)
+        if parsed:
+            meta.last_modified = parsed
+
+    keywords_raw = _find_local_text(
+        root, ("hp:keywords", "hc:keywords", "cp:keywords")
+    )
+    if keywords_raw:
+        meta.keywords = [
+            k.strip() for k in keywords_raw.split(",") if k.strip()
+        ]
+
+    return meta
+
+
+def _strip_prefix(name: str) -> str:
+    if ":" in name:
+        return name.split(":", 1)[1]
+    return name
+
+
+def _find_local_text(root: ET.Element, names: tuple) -> Optional[str]:
+    """Find a direct or nested child element by local name; return its text."""
+    targets = {_strip_prefix(_local(n)) for n in names}
+    for elem in root.iter():
+        if _strip_prefix(_local(elem.tag)) in targets:
+            return (elem.text or "").strip() or None
+    return None
+
+
 class _HwpxParser:
     def __init__(
         self,
@@ -88,6 +156,7 @@ class _HwpxParser:
         self._image_refs: List[Tuple[str, str, str]] = []
         self._seen_arc_paths: Dict[str, str] = {}
         self._extracted: Dict[str, Path] = {}
+        self.metadata: DocumentMetadata = DocumentMetadata()
 
     def convert(self) -> str:
         try:
@@ -98,6 +167,7 @@ class _HwpxParser:
             ) from e
         with zf:
             _detect_encryption(zf)
+            self.metadata = _extract_metadata_hwpx(zf)
             section_names = _iter_sections(zf)
             if not section_names:
                 raise ConversionError("HWPX has no Contents/section*.xml")
@@ -290,8 +360,15 @@ def convert_hwpx(
     encoding: str = "utf-8",
     image_mode: str = "link",
     image_dir: Optional[Path] = None,
+    with_metadata: bool = True,
 ) -> str:
-    """Convert a .hwpx file to markdown."""
+    """Convert a .hwpx file to markdown.
+
+    When ``with_metadata`` is true (the default) and the source
+    contains a populated ``Contents/header.xml``, a YAML
+    frontmatter block (title, author, dates, keywords) is
+    prepended to the output.
+    """
     if not source.is_file():
         raise FileNotFoundError(f"HWPX file not found: {source}")
     if image_mode not in {"embed", "link", "skip"}:
@@ -302,4 +379,21 @@ def convert_hwpx(
         image_mode=image_mode,
         image_dir=image_dir,
     )
-    return parser.convert()
+    body = parser.convert()
+    if with_metadata and not parser.metadata.is_empty():
+        from hwp2md.metadata import prepend_frontmatter
+        return prepend_frontmatter(body, parser.metadata)
+    return body
+
+
+def extract_metadata_hwpx(source: Path) -> DocumentMetadata:
+    """Read only the HWPX header metadata without rendering the body."""
+    try:
+        zf = zipfile.ZipFile(source, "r")
+    except zipfile.BadZipFile as e:
+        raise ConversionError(
+            f"Not a valid HWPX archive: {source.name} ({e})"
+        ) from e
+    with zf:
+        _detect_encryption(zf)
+        return _extract_metadata_hwpx(zf)

@@ -8,11 +8,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Footnotes, headers, footers, captions
-- Metadata frontmatter (작성자/날짜/키워드)
 - Streaming/chunked conversion for very large files
 - Inline image position recovery for HWP 5.x (currently extracts
   BinData/* but cannot place images inside paragraphs)
 - PyPI publication (currently `pip install git+...` only)
+- 1.0.0 stability work: API surface freeze, end-to-end
+  benchmark against a public sample corpus
+
+## [0.5.0] - 2026-06-08
+
+### Added
+- **Document metadata extraction and YAML frontmatter**
+  rendering. New ``hwp2md.metadata.DocumentMetadata`` dataclass
+  with title, author, subject, creation date, last modified
+  date, and keywords. ``render_frontmatter()`` emits a
+  Jekyll/Hugo-compatible block. A small hand-rolled serializer
+  keeps the zero-deps posture (no PyYAML).
+- **HWPX metadata** parsed from ``Contents/header.xml``.
+  Supports the HWPML 2011 ``<hp:title>``/``<hp:author>`` style,
+  the HWPML 2010 ``<hc:title>``/``<hc:author>`` style, and the
+  Dublin Core ``<dc:title>``/``<dc:creator>`` style. A missing
+  or malformed header yields an empty metadata object (no
+  error).
+- **HWP 5.x metadata** parsed from the DocInfo stream. Dates
+  are read from HWPTAG_DOCUMENT_PROPERTIES at the standard
+  ``(year << 16) | (month << 8) | day`` bit-packed offsets
+  (creation at 14, last modified at 18). Author is best-effort
+  from HWPTAG_IDENTITY_NAME if present, otherwise from the
+  author slot in DOCUMENT_PROPERTIES.
+- **Public API**: ``convert()`` and ``batch_convert()`` accept
+  ``with_metadata: bool = True``. ``extract_metadata_hwpx()``
+  and ``extract_metadata_hwp5()`` expose raw metadata
+  access.
+- **CLI**: ``--no-frontmatter`` flag wired through to the API.
+- **Synthetic HWPX fixture builder** gained metadata fields
+  (``set_metadata(title=..., author=..., date=..., keywords=...)``)
+  and emits a populated ``Contents/header.xml`` when any are
+  set.
+
+### Notes
+- 72 tests passing (up from 51). New tests cover the metadata
+  module, HWPX header parsing (multi-namespace, partial fields,
+  invalid archive), and HWP 5.x packed-date extraction.
+- The HWP 5.x author slot at offset 22 of DOCUMENT_PROPERTIES
+  is not always populated; HWPTAG_IDENTITY_NAME is the more
+  reliable source.
 
 ## [0.4.0] - 2026-06-08
 

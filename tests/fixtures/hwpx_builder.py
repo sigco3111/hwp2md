@@ -52,6 +52,12 @@ class HwpxDocument:
     paragraphs: List[Paragraph] = field(default_factory=list)
     tables: List[Table] = field(default_factory=list)
     bindata: Dict[str, bytes] = field(default_factory=dict)
+    title: Optional[str] = None
+    author: Optional[str] = None
+    date: Optional[str] = None
+    keywords: List[str] = field(default_factory=list)
+    subject: Optional[str] = None
+    last_modified: Optional[str] = None
 
     def add_para(
         self,
@@ -78,6 +84,29 @@ class HwpxDocument:
 
     def add_image(self, logical_name: str, png_bytes: bytes) -> None:
         self.bindata[logical_name] = png_bytes
+
+    def set_metadata(
+        self,
+        *,
+        title: Optional[str] = None,
+        author: Optional[str] = None,
+        date: Optional[str] = None,
+        keywords: Optional[List[str]] = None,
+        subject: Optional[str] = None,
+        last_modified: Optional[str] = None,
+    ) -> None:
+        if title is not None:
+            self.title = title
+        if author is not None:
+            self.author = author
+        if date is not None:
+            self.date = date
+        if keywords is not None:
+            self.keywords = list(keywords)
+        if subject is not None:
+            self.subject = subject
+        if last_modified is not None:
+            self.last_modified = last_modified
 
 
 def _render_paragraph(p: Paragraph) -> str:
@@ -150,15 +179,23 @@ def render_section_xml(doc: HwpxDocument) -> str:
     return f"{ROOT_OPEN}<hs:body>{body}</hs:body>{ROOT_CLOSE}"
 
 
-def render_header_xml() -> str:
-    return (
-        f"{XML_DECL}\n"
-        f'<hc:header xmlns:hc="{NS_HC}">'
-        "<hc:docInfo>"
-        "<hc:title>Test</hc:title>"
-        "</hc:docInfo>"
-        "</hc:header>"
-    )
+def render_header_xml(doc: HwpxDocument) -> str:
+    parts = [f"{XML_DECL}", f'<hc:header xmlns:hc="{NS_HC}">', "<hc:docInfo>"]
+    if doc.title:
+        parts.append(f"<hc:title>{_xml_escape(doc.title)}</hc:title>")
+    if doc.author:
+        parts.append(f"<hc:author>{_xml_escape(doc.author)}</hc:author>")
+    if doc.subject:
+        parts.append(f"<hc:subject>{_xml_escape(doc.subject)}</hc:subject>")
+    if doc.date:
+        parts.append(f"<hc:date>{_xml_escape(doc.date)}</hc:date>")
+    if doc.last_modified:
+        parts.append(f"<hc:lastModifiedDate>{_xml_escape(doc.last_modified)}</hc:lastModifiedDate>")
+    if doc.keywords:
+        parts.append(f"<hc:keywords>{_xml_escape(', '.join(doc.keywords))}</hc:keywords>")
+    parts.append("</hc:docInfo>")
+    parts.append("</hc:header>")
+    return "\n".join(parts)
 
 
 def build_hwpx_bytes(
@@ -172,7 +209,7 @@ def build_hwpx_bytes(
         info = zipfile.ZipInfo("mimetype")
         info.compress_type = zipfile.ZIP_STORED
         zf.writestr(info, mimetype.encode("ascii"))
-        zf.writestr("Contents/header.xml", render_header_xml())
+        zf.writestr("Contents/header.xml", render_header_xml(doc))
         zf.writestr("Contents/section0.xml", render_section_xml(doc))
         for name, data in doc.bindata.items():
             zf.writestr(f"BinData/{name}", data)

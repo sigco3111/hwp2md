@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hwp2md"
-version = "0.4.0"
+version = "0.5.0"
 description = "Convert Korean HWP (한글) files to clean Markdown — offline-first, ideal for LLM RAG pipelines"
 readme = "README.md"
 license = {text = "MIT"}

@@ -50,6 +50,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="version",
         version=f"hwp2md {__version__}",
     )
+    parser.add_argument(
+        "--no-frontmatter",
+        action="store_true",
+        help="Skip YAML frontmatter (title/author/dates/keywords) extraction.",
+    )
     return parser
 
 
@@ -65,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
                 encoding=args.encoding,
                 recursive=not args.no_recursive,
                 image_mode=args.images,
+                with_metadata=not args.no_frontmatter,
             ):
                 print(f"✅ {src} → {dst}")
                 count += 1
@@ -80,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
                 encoding=args.encoding,
                 image_mode=args.images,
                 image_dir=image_dir,
+                with_metadata=not args.no_frontmatter,
             )
             output = args.output or args.input.with_suffix(".md")
             output.write_text(md_text, encoding=args.encoding)

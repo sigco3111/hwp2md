@@ -59,7 +59,7 @@ pip install -e ".[all,dev]"
 
 ### CLI
 ```bash
-# 단일 파일 변환
+# 단일 파일 변환 (frontmatter 자동 포함)
 hwp2md input.hwp -o output.md
 
 # 출력 파일 자동 지정 (input.hwp → input.md)
@@ -74,17 +74,29 @@ hwp2md input.hwp --encoding utf-8
 # 이미지 임베딩 (base64) vs 참조 링크
 hwp2md input.hwp --images embed
 hwp2md input.hwp --images link
+
+# frontmatter 끄기
+hwp2md input.hwp --no-frontmatter
 ```
 
 ### Python API
 ```python
 from hwp2md import convert
 
-# 가장 간단한 사용
+# 가장 간단한 사용 (frontmatter 자동 포함)
 markdown = convert("input.hwpx")
 
 # 이미지 모드 선택 (link | embed | skip)
 markdown = convert("input.hwpx", image_mode="link", image_dir="./images")
+
+# frontmatter 끄기
+markdown = convert("input.hwpx", with_metadata=False)
+
+# 메타데이터만 따로 읽기
+from hwp2md.backends.hwpx import extract_metadata_hwpx
+from pathlib import Path
+meta = extract_metadata_hwpx(Path("input.hwpx"))
+print(meta.title, meta.author, meta.keywords)
 
 # 파일로 저장
 with open("output.md", "w", encoding="utf-8") as f:
@@ -96,6 +108,23 @@ from hwp2md import batch_convert
 
 for src, dst in batch_convert(Path("./docs/"), Path("./out/")):
     print(f"✅ {src.name} → {dst.relative_to(Path('./out/'))}")
+```
+
+출력 예시 (frontmatter 포함 시):
+```markdown
+---
+title: 2025년 AI 산업 동향 보고서
+author: 홍길동
+date: 2025-01-15
+keywords:
+  - AI
+  - 산업
+  - 동향
+---
+
+# 개요
+
+본 보고서는 2025년 한국 AI 산업의...
 ```
 
 ---
@@ -222,7 +251,7 @@ jobs:
 - [x] **0.2.0** — HWPX + HWP 5.x 파서 (텍스트/제목/표/이미지)
 - [x] **0.3.0** — HWP 5.x 표/이미지/문자 서식 정확도 개선
 - [x] **0.4.0** — GitHub Action (`uses: sigco3111/hwp2md@v1`) + CI/Release workflow
-- [ ] **0.5.0** — 메타데이터 frontmatter 추출 (작성자/날짜/키워드)
+- [x] **0.5.0** — 메타데이터 frontmatter 추출 (작성자/날짜/키워드)
 - [ ] **1.0.0** — 안정 API, 90%+ 문서 정확도 벤치마크
 
 ---
