@@ -32,6 +32,18 @@ jobs:
       - name: Run pytest
         run: pytest
 
+      - name: Run accuracy benchmark
+        run: python scripts/benchmark.py
+
+      - name: mypy --strict (public modules)
+        run: |
+          python -m pip install --upgrade mypy
+          python -m mypy --strict \
+            src/hwp2md/__init__.py \
+            src/hwp2md/core.py \
+            src/hwp2md/exceptions.py \
+            src/hwp2md/metadata.py
+
   lint-yaml:
     name: yamllint (workflows + action.yml)
     runs-on: ubuntu-latest

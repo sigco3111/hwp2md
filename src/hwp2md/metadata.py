@@ -12,8 +12,10 @@ YAML dependency so the project keeps its zero-deps posture.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
-from typing import List, Optional
+from datetime import date as _date
+from datetime import date
+from datetime import datetime
+from typing import List, Optional, Tuple, Union
 
 
 @dataclass
@@ -21,8 +23,8 @@ class DocumentMetadata:
     title: Optional[str] = None
     author: Optional[str] = None
     subject: Optional[str] = None
-    date: Optional[date] = None
-    last_modified: Optional[date] = None
+    date: Optional[_date] = None
+    last_modified: Optional[_date] = None
     keywords: List[str] = field(default_factory=list)
 
     def is_empty(self) -> bool:
@@ -31,8 +33,8 @@ class DocumentMetadata:
             self.date, self.last_modified, self.keywords,
         ])
 
-    def to_pairs(self) -> List[tuple]:
-        pairs: List[tuple] = []
+    def to_pairs(self) -> List[Tuple[str, Union[str, List[str]]]]:
+        pairs: List[Tuple[str, Union[str, List[str]]]] = []
         if self.title:
             pairs.append(("title", self.title))
         if self.author:

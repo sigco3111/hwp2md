@@ -12,8 +12,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inline image position recovery for HWP 5.x (currently extracts
   BinData/* but cannot place images inside paragraphs)
 - PyPI publication (currently `pip install git+...` only)
-- 1.0.0 stability work: API surface freeze, end-to-end
-  benchmark against a public sample corpus
+- Public HWPX/HWP 5.x sample corpus (needed for real-world
+  benchmark; see `docs/ACCURACY.md`)
+
+## [1.0.0] - 2026-06-08
+
+### Added
+- **API stability contract** — [`docs/API.md`](docs/API.md) declares
+  the public surface and the SemVer guarantees for the 1.x line.
+  The 1.0.0 release is a freeze on the public API. `EncryptedDocumentError`
+  is now exported from the top-level `hwp2md` namespace alongside the
+  rest of the exception hierarchy.
+- **Accuracy benchmark** — [`scripts/benchmark.py`](scripts/benchmark.py)
+  runs 9 hand-curated HWPX cases through `convert()` and asserts
+  substring presence/absence in the rendered markdown. Results
+  documented in [`docs/ACCURACY.md`](docs/ACCURACY.md): 9/9 PASS
+  on the in-tree synthetic corpus. The script is CI-friendly
+  (exits non-zero on failure) and can be extended with real
+  sample files as the corpus grows.
+- **`CONTRIBUTING.md`** — development setup, commit style, PR
+  checklist, and how to send anonymised HWP sample files.
+- README stability + benchmark badges; new "안정성 & 벤치마크"
+  section linking to the new docs.
+
+### Changed
+- `DocumentMetadata.date` field type now mypy-strict-clean (was
+  shadowed by the dataclass field name). The public attribute
+  name and semantics are unchanged.
+- `src/hwp2md/metadata.py` now passes `mypy --strict` (along
+  with `__init__.py`, `core.py`, `exceptions.py`).
+
+### Notes
+- v1.0.0 is the **stable release**. From here on, breaking
+  changes require a major version bump and a deprecation period
+  (see `docs/API.md`).
+- The 90%+ accuracy roadmap item is qualified: the in-tree
+  synthetic corpus is 100%; a public sample corpus is needed
+  for end-to-end real-world measurement. See `docs/ACCURACY.md`
+  for the honest statement.
+- 72 tests passing (up from 51 in v0.5.0). mypy --strict clean
+  on the public modules.
 
 ## [0.5.0] - 2026-06-08
 

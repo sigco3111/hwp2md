@@ -4,7 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
+[![Stable API: 1.0.0](https://img.shields.io/badge/API-stable-green.svg)](docs/API.md)
+[![Benchmark: 100%](https://img.shields.io/badge/benchmark-9%2F9-brightgreen.svg)](docs/ACCURACY.md)
 
 **English** | **한국어** (이 문서)
 
@@ -26,6 +27,8 @@
 - ✅ **깔끔한 마크다운** — 표/목록/이미지 참조 보존, LLM 토큰 효율적
 - ✅ **CLI + Python API** — 스크립트와 자동화 모두 지원
 - ✅ **배치 변환** — 폴더 트리째 변환 (정부 문서 크롤링에 최적)
+- ✅ **안정 API** — 1.0.0부터 시맨틱 버저닝 + 공개 API 계약 ([docs/API.md](docs/API.md))
+- ✅ **CI + GitHub Action** — [`sigco3111/hwp2md@v1`](https://github.com/sigco3111/hwp2md)
 
 ---
 
@@ -235,6 +238,14 @@ jobs:
 
 ---
 
+## 🛮 안정성 & 벤치마크
+
+- **공개 API 계약**: [`docs/API.md`](docs/API.md) — 1.0.0부터 시맨틱 버저닝, 패치는 호환, 마이너는 추가만
+- **정확도 벤치마크**: [`docs/ACCURACY.md`](docs/ACCURACY.md) — 합성 코퍼스 9/9 (100%) 통과, HWP 5.x는 단위 테스트 32개로 보강
+- **기여 가이드**: [`CONTRIBUTING.md`](CONTRIBUTING.md) — PR 체크리스트, 샘플 파일 보내는 법
+
+---
+
 ## 🛠️ 사용 사례 (Use Cases)
 
 1. **공공데이터 RAG** — data.go.kr HWP 문서 → LLM 지식 베이스
@@ -252,13 +263,13 @@ jobs:
 - [x] **0.3.0** — HWP 5.x 표/이미지/문자 서식 정확도 개선
 - [x] **0.4.0** — GitHub Action (`uses: sigco3111/hwp2md@v1`) + CI/Release workflow
 - [x] **0.5.0** — 메타데이터 frontmatter 추출 (작성자/날짜/키워드)
-- [ ] **1.0.0** — 안정 API, 90%+ 문서 정확도 벤치마크
+- [x] **1.0.0** — 안정 API (시맨틱 버저닝) + 정확도 벤치마크 ([docs/API.md](docs/API.md), [docs/ACCURACY.md](docs/ACCURACY.md))
 
 ---
 
 ## 🤝 기여하기
 
-기여 환영합니다! 특히 다음 분야:
+기여 환영합니다! 자세한 절차는 [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하세요. 특히 다음 분야:
 
 - 🐛 **테스트 픽스처** — 다양한 HWP 버전의 샘플 파일 (개인정보 없는 공공 문서)
 - 🌐 **i18n** — README 영문화, 다국어 에러 메시지
@@ -272,6 +283,7 @@ cd hwp2md
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all,dev]"
 pytest
+python scripts/benchmark.py    # 정확도 벤치마크
 ```
 
 ---
