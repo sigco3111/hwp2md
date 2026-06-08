@@ -7,12 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Character formatting fidelity (bold/italic/color preserved as inline markdown in HWP 5.x)
-- HWP 5.x table and image extraction (currently text-only)
 - Footnotes, headers, footers, captions
 - GitHub Action wrapper (`uses: sigco3111/hwp2md@v1`)
 - Metadata frontmatter (작성자/날짜/키워드)
 - Streaming/chunked conversion for very large files
+- Inline image position recovery for HWP 5.x (currently extracts
+  BinData/* but cannot place images inside paragraphs)
+
+## [0.3.0] - 2026-06-08
+
+### Added
+- **HWP 5.x table extraction** — HWPTAG_TABLE records now produce
+  GFM tables, with cells laid out by row/column count read from
+  the table record header. Multi-paragraph cells are joined with
+  newlines.
+- **HWP 5.x character formatting** — HWPTAG_PARA_CHAR_SHAPE
+  position slots are joined with HWPTAG_CHAR_SHAPE definitions
+  (read from the DocInfo stream) to apply bold, italic,
+  underline, and strikethrough as inline markdown. Works at both
+  paragraph and table-cell level.
+- **HWP 5.x image extraction** — BinData/* streams are extracted
+  to the ``image_dir`` when ``image_mode="link"`` and a reference
+  to the first image is appended to the markdown output. Inline
+  position recovery remains a known gap (see Unreleased).
+- New ``CharShape``, ``Hwp5Run``, ``Hwp5Paragraph`` dataclasses
+  in the HWP 5.x backend to model the level-based record tree.
+
+### Changed
+- HWP 5.x parser refactored from a flat record walker to a
+  level-based section parser (``_SectionParser``) so that
+  control records (tables, inline marks) and their children can
+  be grouped correctly.
+
+### Notes
+- Bold/italic detection depends on the HWP 5.x version's CHAR_SHAPE
+  payload layout (offsets 7/8/9/10). Versions that diverge from
+  the 5.0 (34-byte) / 5.1 (38-byte) layout will be parsed as
+  unstyled.
+- Tests: 51 passing (15 HWPX + 28 HWP 5.x + 6 CLI smoke + 2 misc)
+
+## [0.2.0] - 2026-06-08
 
 ## [0.2.0] - 2026-06-08
 
