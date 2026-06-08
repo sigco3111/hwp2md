@@ -3,15 +3,16 @@
 Offline-first, LLM RAG-friendly, zero-dependency core.
 """
 
-from hwp2md.core import convert, batch_convert
-from hwp2md.exceptions import Hwp2mdError, UnsupportedFormatError, ConversionError
+from hwp2md.core import ImageMode, batch_convert, convert
+from hwp2md.exceptions import ConversionError, Hwp2mdError, UnsupportedFormatError
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     "convert",
     "batch_convert",
     "Hwp2mdError",
     "UnsupportedFormatError",
     "ConversionError",
+    "ImageMode",
     "__version__",
 ]

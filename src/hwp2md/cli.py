@@ -64,13 +64,23 @@ def main(argv: list[str] | None = None) -> int:
                 output_dir,
                 encoding=args.encoding,
                 recursive=not args.no_recursive,
+                image_mode=args.images,
             ):
                 print(f"✅ {src} → {dst}")
                 count += 1
             print(f"\nConverted {count} file(s).")
             return 0
         else:
-            md_text = convert(args.input, encoding=args.encoding)
+            image_dir = None
+            if args.images == "link":
+                output = args.output or args.input.with_suffix(".md")
+                image_dir = output.parent / f"{output.stem}_images"
+            md_text = convert(
+                args.input,
+                encoding=args.encoding,
+                image_mode=args.images,
+                image_dir=image_dir,
+            )
             output = args.output or args.input.with_suffix(".md")
             output.write_text(md_text, encoding=args.encoding)
             print(f"✅ {args.input} → {output}")

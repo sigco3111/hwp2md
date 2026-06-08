@@ -81,7 +81,10 @@ hwp2md input.hwp --images link
 from hwp2md import convert
 
 # 가장 간단한 사용
-markdown = convert("input.hwp")
+markdown = convert("input.hwpx")
+
+# 이미지 모드 선택 (link | embed | skip)
+markdown = convert("input.hwpx", image_mode="link", image_dir="./images")
 
 # 파일로 저장
 with open("output.md", "w", encoding="utf-8") as f:
@@ -157,8 +160,8 @@ for src, dst in batch_convert(Path("./docs/"), Path("./out/")):
 ## 🗺️ 로드맵
 
 - [x] **0.1.0** — 프로젝트 부트스트랩, CLI 뼈대, HWPX 기본 파서
-- [ ] **0.2.0** — HWP 5.x (OLE) 지원 via `olefile`
-- [ ] **0.3.0** — 표/이미지/각주 정확도 개선
+- [x] **0.2.0** — HWPX + HWP 5.x 파서 (텍스트/제목/표/이미지)
+- [ ] **0.3.0** — HWP 5.x 표/이미지/각주 정확도 개선
 - [ ] **0.4.0** — GitHub Action (`uses: sigco3111/hwp2md@v1`)
 - [ ] **0.5.0** — 메타데이터 frontmatter 추출 (작성자/날짜/키워드)
 - [ ] **1.0.0** — 안정 API, 90%+ 문서 정확도 벤치마크
