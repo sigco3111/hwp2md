@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+env/
+
+# --- Build / Dist ---
+build/
+dist/
+*.egg
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Test outputs ---
+tests/output/
+tests/fixtures/private/
+
+# --- Project-specific ---
+# Sample HWP files
+*.hwp
+*.hwpx
+!tests/fixtures/sample.hwp
+
+# Generated markdown output
+output/
+*.md.bak

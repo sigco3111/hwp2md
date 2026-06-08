@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hwp2md"
+version = "0.1.0"
+description = "Convert Korean HWP (한글) files to clean Markdown — offline-first, ideal for LLM RAG pipelines"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+keywords = ["hwp", "hangul", "korean", "markdown", "converter", "rag", "llm"]
+authors = [
+    {name = "sigco3111", email = "hjshin@example.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1.0",
+    "mypy>=1.7",
+]
+olefile = [
+    # Used for legacy HWP 5.x OLE container parsing
+    "olefile>=0.46",
+]
+hwpx = [
+    # Used for HWPX (modern XML-based HWP) parsing
+    "lxml>=4.9",
+]
+all = [
+    "olefile>=0.46",
+    "lxml>=4.9",
+]
+
+[project.scripts]
+hwp2md = "hwp2md.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sigco3111/hwp2md"
+Repository = "https://github.com/sigco3111/hwp2md"
+Issues = "https://github.com/sigco3111/hwp2md/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
