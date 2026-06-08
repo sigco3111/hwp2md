@@ -8,11 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Footnotes, headers, footers, captions
-- GitHub Action wrapper (`uses: sigco3111/hwp2md@v1`)
 - Metadata frontmatter (작성자/날짜/키워드)
 - Streaming/chunked conversion for very large files
 - Inline image position recovery for HWP 5.x (currently extracts
   BinData/* but cannot place images inside paragraphs)
+- PyPI publication (currently `pip install git+...` only)
+
+## [0.4.0] - 2026-06-08
+
+### Added
+- **GitHub Action** (`action.yml`) — composite action that wraps the
+  hwp2md CLI. Six inputs (`input`, `output`, `encoding`,
+  `image-mode`, `install-extras`, `working-directory`) and two
+  outputs (`output-path`, `files-count`). Use as
+  `sigco3111/hwp2md@v1` in any workflow.
+- **CI workflow** (`.github/workflows/ci.yml`) — runs pytest on
+  Python 3.9–3.13 across all push and pull_request events, plus
+  yamllint and an `action.yml` schema check.
+- **Release workflow** (`.github/workflows/release.yml`) —
+  builds sdist + wheel on `v*` tag push and attaches them to a
+  GitHub Release with auto-generated notes.
+- **`.yamllint.yaml`** — local config (line-length 120, GitHub
+  Actions friendliness for `on:` keys, document-start disabled).
+- **README** — new "GitHub Action" section with input/output
+  tables and usage examples.
+
+### Notes
+- The release workflow uses `softprops/action-gh-release@v2` and
+  `actions/setup-python@v5`; both are pinned to a major version.
+  PyPI publish is not wired in this release — see Unreleased.
 
 ## [0.3.0] - 2026-06-08
 

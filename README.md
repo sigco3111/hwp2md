@@ -100,6 +100,65 @@ for src, dst in batch_convert(Path("./docs/"), Path("./out/")):
 
 ---
 
+## ⚙️ GitHub Action
+
+CI 파이프라인에서 HWP/HWPX를 마크다운으로 자동 변환:
+
+```yaml
+# .github/workflows/hwp2md.yml
+name: Convert HWP to Markdown
+on: [push]
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigco3111/hwp2md@v1
+        with:
+          input: docs/         # 단일 파일 또는 디렉터리
+          output: markdown/    # (선택) 출력 경로
+          image-mode: link     # embed | link | skip
+```
+
+### Inputs
+
+| 이름 | 필수 | 기본값 | 설명 |
+|------|------|--------|------|
+| `input` | ✅ | — | `.hwp`/`.hwpx` 파일 또는 디렉터리 경로 |
+| `output` | ❌ | 소스 옆/`<input>/markdown_output` | 출력 파일 또는 디렉터리 |
+| `encoding` | ❌ | `utf-8` | 출력 인코딩 |
+| `image-mode` | ❌ | `link` | `embed` / `link` / `skip` |
+| `install-extras` | ❌ | `all` | pip extras (`olefile` / `all` / `""`) |
+| `working-directory` | ❌ | `.` | 변환 작업 디렉터리 |
+
+### Outputs
+
+| 이름 | 설명 |
+|------|------|
+| `output-path` | 변환된 마크다운 절대 경로 |
+| `files-count` | 변환된 파일 수 (단일=1, 배치=N) |
+
+### 사용 예시
+
+```yaml
+# PR에 자동 첨부 (정부 문서 크롤링에 최적)
+- uses: sigco3111/hwp2md@v1
+  with:
+    input: crawled_data/
+    output: pr_body/markdown/
+    image-mode: link
+
+# 결과를 후속 step에서 사용
+- uses: sigco3111/hwp2md@v1
+  id: hwp
+  with:
+    input: docs/report.hwpx
+- run: echo "변환 위치: ${{ steps.hwp.outputs.output-path }}"
+```
+
+---
+
 ## 📋 지원 형식
 
 | 형식 | 확장자 | 상태 | 의존성 |
@@ -162,7 +221,7 @@ for src, dst in batch_convert(Path("./docs/"), Path("./out/")):
 - [x] **0.1.0** — 프로젝트 부트스트랩, CLI 뼈대, HWPX 기본 파서
 - [x] **0.2.0** — HWPX + HWP 5.x 파서 (텍스트/제목/표/이미지)
 - [x] **0.3.0** — HWP 5.x 표/이미지/문자 서식 정확도 개선
-- [ ] **0.4.0** — GitHub Action (`uses: sigco3111/hwp2md@v1`)
+- [x] **0.4.0** — GitHub Action (`uses: sigco3111/hwp2md@v1`) + CI/Release workflow
 - [ ] **0.5.0** — 메타데이터 frontmatter 추출 (작성자/날짜/키워드)
 - [ ] **1.0.0** — 안정 API, 90%+ 문서 정확도 벤치마크
 

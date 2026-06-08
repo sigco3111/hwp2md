@@ -1,0 +1,118 @@
+---
+name: 'HWP to Markdown'
+description: >-
+  Convert Korean HWP (한글) and HWPX files to clean Markdown —
+  offline-first, ideal for LLM RAG pipelines. Wraps the hwp2md CLI.
+author: 'sigco3111'
+branding:
+  icon: 'file-text'
+  color: 'blue'
+
+inputs:
+  input:
+    description: >-
+      Path to an HWP/HWPX file or a directory of files. When a directory
+      is supplied, every matching file is converted recursively.
+    required: true
+  output:
+    description: >-
+      Output path. For a single file, this is the .md file path
+      (default: alongside the source with .md extension). For a
+      directory, this is the destination directory (default:
+      <input>/markdown_output).
+    required: false
+  encoding:
+    description: 'Output text encoding.'
+    required: false
+    default: 'utf-8'
+  image-mode:
+    description: 'How to handle embedded images.'
+    required: false
+    default: 'link'
+  install-extras:
+    description: >-
+      pip extras to install. Use "olefile" for HWP 5.x, "all" for both
+      HWP 5.x and HWPX, or "" for HWPX only (zero deps).
+    required: false
+    default: 'all'
+  working-directory:
+    description: 'Working directory for the conversion step.'
+    required: false
+    default: '.'
+
+outputs:
+  output-path:
+    description: >-
+      Absolute path to the markdown output (file path for single-file
+      mode, directory path for batch mode).
+  files-count:
+    description: >-
+      Number of files converted. 1 for single-file mode, N for batch mode.
+
+runs:
+  using: composite
+  steps:
+    - name: 'Set up Python'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 'Install hwp2md'
+      shell: bash
+      run: |
+        set -euo pipefail
+        EXTRAS="${{ inputs.install-extras }}"
+        if [ -z "$EXTRAS" ]; then
+          pip install --upgrade hwp2md
+        else
+          pip install --upgrade "hwp2md[$EXTRAS]"
+        fi
+
+    - name: 'Convert HWP/HWPX to Markdown'
+      id: convert
+      shell: bash
+      working-directory: '${{ inputs.working-directory }}'
+      env:
+        HWP2MD_INPUT: '${{ inputs.input }}'
+        HWP2MD_OUTPUT: '${{ inputs.output }}'
+        HWP2MD_ENCODING: '${{ inputs.encoding }}'
+        HWP2MD_IMAGE_MODE: '${{ inputs.image-mode }}'
+      run: |
+        set -euo pipefail
+        if [ -z "$HWP2MD_OUTPUT" ]; then
+          hwp2md "$HWP2MD_INPUT" \
+            --encoding "$HWP2MD_ENCODING" \
+            --images "$HWP2MD_IMAGE_MODE"
+          RESOLVED_OUTPUT="$HWP2MD_INPUT"
+        else
+          hwp2md "$HWP2MD_INPUT" -o "$HWP2MD_OUTPUT" \
+            --encoding "$HWP2MD_ENCODING" \
+            --images "$HWP2MD_IMAGE_MODE"
+          RESOLVED_OUTPUT="$HWP2MD_OUTPUT"
+        fi
+        ABS_OUTPUT="$(cd "$(dirname "$RESOLVED_OUTPUT")" \
+          && pwd)/$(basename "$RESOLVED_OUTPUT")"
+        echo "output-path=$ABS_OUTPUT" >> "$GITHUB_OUTPUT"
+
+    - name: 'Count converted files'
+      id: count
+      shell: bash
+      if: always() && steps.convert.outcome == 'success'
+      working-directory: '${{ inputs.working-directory }}'
+      env:
+        HWP2MD_INPUT: '${{ inputs.input }}'
+        HWP2MD_OUTPUT: '${{ inputs.output }}'
+      run: |
+        set -euo pipefail
+        TARGET="$HWP2MD_OUTPUT"
+        if [ -z "$TARGET" ]; then
+          TARGET="$HWP2MD_INPUT"
+        fi
+        if [ -d "$TARGET" ]; then
+          COUNT=$(find "$TARGET" -type f -name '*.md' | wc -l | tr -d ' ')
+        elif [ -f "$TARGET" ]; then
+          COUNT=1
+        else
+          COUNT=0
+        fi
+        echo "files-count=$COUNT" >> "$GITHUB_OUTPUT"
